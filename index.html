@@ -1,0 +1,84 @@
+<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="mobile-web-app-capable" content="yes"><meta name="theme-color" content="#0f766e"><title>دستیار بالینی دامپزشکی</title>
+<style>
+:root{--bg:#f4f7f6;--fg:#14211d;--cd:#fff;--ac:#0f766e;--mu:#64748b;--bd:#d9e2df;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1614;--fg:#e5eeeb;--cd:#172320;--ac:#2dd4bf;--mu:#94a3b8;--bd:#2a3a35}}
+:root[data-theme="dark"]{--bg:#0e1614;--fg:#e5eeeb;--cd:#172320;--ac:#2dd4bf;--mu:#94a3b8;--bd:#2a3a35}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 Tahoma,"Vazirmatn",system-ui,sans-serif}
+header{background:var(--ac);color:#fff;padding:12px 14px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+main{max-width:720px;margin:auto;padding:12px}
+.cd{background:var(--cd);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+h3{margin:0 0 8px;font-size:15px}
+button{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:9px 14px;font:inherit;cursor:pointer;margin:2px}
+button.s{background:transparent;color:var(--ac);border:1px solid var(--ac)}button.r{background:#dc2626}
+input,textarea,select{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:8px;font:inherit}
+textarea{min-height:110px}.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g label{font-size:12px;color:var(--mu)}
+.out{white-space:pre-wrap;margin-top:8px;word-break:break-word}.n{font-size:12px;color:var(--mu)}
+.it{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)}
+.m{padding:8px;border-radius:10px;margin:6px 0;white-space:pre-wrap}.u{background:var(--bg)}.a{border:1px solid var(--bd)}
+</style></head><body>
+<header><span>🐾 دستیار بالینی دامپزشکی</span><button class="s" id="key" style="color:#fff;border-color:#fff">🔑</button><button class="s" id="home" style="color:#fff;border-color:#fff">پرونده‌ها</button></header>
+<main>
+<div id="list"></div>
+<div id="case" hidden>
+<div class="cd"><h3>۱) ضبط مکالمه و تبدیل به متن</h3>
+<select id="lang"><option value="fa-IR">فارسی</option><option value="en-US">English</option></select>
+<button id="rec">🎙️ شروع ضبط</button>
+<textarea id="tx" placeholder="متن مکالمه اینجا نوشته می‌شود (قابل ویرایش). اگر ضبط کار نکرد، از میکروفون کیبورد گوشی استفاده کنید."></textarea>
+<button id="ext">استخراج و خلاصه‌سازی</button></div>
+<div class="cd"><h3>۲) اطلاعات کیس</h3><div class="g" id="f"></div>
+<label class="n">خلاصه</label><textarea id="sum"></textarea>
+<button id="save">💾 ذخیره پرونده</button><button class="r s" id="del">حذف</button></div>
+<div class="cd"><h3>۳) تشخیص افتراقی</h3><button id="dd">پیشنهاد تشخیص‌های افتراقی و آزمون‌ها</button><div class="out" id="ddo"></div></div>
+<div class="cd"><h3>۴) گفتگو درباره کیس / ثبت نتایج</h3><div id="ch"></div>
+<textarea id="cm" style="min-height:60px" placeholder="سؤال یا نتیجه آزمایش/رادیوگرافی را بنویسید..."></textarea><button id="cs">ارسال</button></div>
+<div class="cd"><h3>۵) درمان و دوز دارو</h3><div class="g"><div><label class="n">تشخیص نهایی</label><input id="dx"></div><div><label class="n">وزن (kg)</label><input id="wt" inputmode="decimal"></div></div>
+<button id="tr">پیشنهاد درمان و دوز</button><div class="out" id="tro"></div></div>
+</div>
+<p class="n" id="nt">توضیح: هوش مصنوعی از دانش خود (مثل Ettinger، Nelson & Couto، Plumb's، BSAVA) پاسخ می‌دهد و جستجوی زنده ندارد. کلید API فقط روی همین مرورگر ذخیره می‌شود. تشخیص و دوزها را حتماً با منبع تأیید کنید.</p>
+</main>
+<script>
+const $=i=>document.getElementById(i);
+const KEYS=[["patient","نام حیوان"],["owner","نام صاحب"],["age","سن"],["species","گونه"],["breed","نژاد"],["sex","جنس/عقیم"],["complaint","شکایت اصلی"],["onset","زمان شروع"],["symptoms","علائم"],["diet","تغذیه"],["history","سابقه/واکسن/دارو"]];
+let cases=[],cur=null,sample=null,chat=[],rec=null,on=false;
+try{cases=JSON.parse(localStorage.getItem("vc")||"[]")}catch(e){}
+const persist=()=>{try{localStorage.setItem("vc",JSON.stringify(cases))}catch(e){}};
+$("f").innerHTML=KEYS.map(([k,l])=>`<div><label>${l}</label><input id="k_${k}"></div>`).join("");
+const SYS="You are a clinical assistant for a licensed small-animal veterinarian (dogs, cats). Answer in the user's language (Persian unless told otherwise), concise and structured. Base answers on standard references (Ettinger, Nelson & Couto, Plumb's, BSAVA, Merck Vet Manual) and name them; you cannot search live. Doses: give mg/kg, route, frequency, duration, and cautions; flag species-specific toxicity (e.g. cats). Remind to verify.";
+const KEYN="vkey";
+sample=async function(input,o={}){if(!localStorage.getItem(KEYN)){const k=prompt("کلید API آنتروپیک را وارد کنید (sk-ant-...):");if(!k)throw{message:"کلید وارد نشد"};localStorage.setItem(KEYN,k.trim())}
+const msgs=typeof input=="string"?[{role:"user",content:input}]:input;
+const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":localStorage.getItem(KEYN),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-5-5",max_tokens:4000,messages:msgs})});
+const d=await r.json();if(!r.ok){if(r.status==401)localStorage.removeItem(KEYN);throw{message:(d.error&&d.error.message)||r.status}}
+const text=d.content.map(c=>c.text||"").join("");if(o.onText)o.onText({text});return{text}};
+sample.json=async(i,o)=>{const t=(await sample(i,o)).text;return JSON.parse(t.slice(t.indexOf("{"),t.lastIndexOf("}")+1))};
+$("key").onclick=()=>{localStorage.removeItem(KEYN);alert("کلید پاک شد؛ دفعه بعد دوباره پرسیده می‌شود.")};
+function ctx(){const o={};KEYS.forEach(([k])=>o[k]=$("k_"+k).value);o.summary=$("sum").value;return JSON.stringify(o)}
+async function ask(input,out,btn){if(!sample){out.textContent="هوش مصنوعی در دسترس نیست.";return}btn.disabled=true;out.textContent="در حال پردازش...";
+try{const r=await sample(input,{cache:false,onText:t=>out.textContent=t.text});out.textContent=r.text}catch(e){out.textContent="خطا: "+(e.message||e.code)}btn.disabled=false}
+function renderList(){$("case").hidden=true;$("list").hidden=false;$("list").innerHTML=`<div class="cd"><button id="nw">➕ پرونده جدید</button>${cases.map((c,i)=>`<div class="it"><span>${c.name||"بدون نام"}<br><small class="n">${c.date||""}</small></span><button class="s" data-i="${i}">باز کردن</button></div>`).join("")||'<p class="n">هنوز پرونده‌ای نیست.</p>'}</div>`;
+$("nw").onclick=()=>open(-1);$("list").querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>open(+b.dataset.i))}
+function open(i){cur=i;const c=i<0?{f:{},tx:"",sum:"",dd:"",tr:"",dx:"",wt:"",chat:[]}:cases[i];
+$("list").hidden=true;$("case").hidden=false;KEYS.forEach(([k])=>$("k_"+k).value=c.f[k]||"");$("tx").value=c.tx;$("sum").value=c.sum;$("ddo").textContent=c.dd;$("tro").textContent=c.tr;$("dx").value=c.dx;$("wt").value=c.wt;chat=c.chat||[];drawChat()}
+function drawChat(){$("ch").innerHTML="";chat.forEach(m=>{const d=document.createElement("div");d.className="m "+(m.role=="user"?"u":"a");d.textContent=m.content;$("ch").append(d)})}
+$("home").onclick=renderList;
+$("save").onclick=()=>{const f={};KEYS.forEach(([k])=>f[k]=$("k_"+k).value);const name=((f.patient||"")+" "+(f.owner||"")).trim()||"بدون نام";
+const c={name,date:new Date().toLocaleDateString("fa-IR"),f,tx:$("tx").value,sum:$("sum").value,dd:$("ddo").textContent,tr:$("tro").textContent,dx:$("dx").value,wt:$("wt").value,chat};
+cur<0?(cases.unshift(c),cur=0):cases[cur]=c;persist();alert("ذخیره شد: "+name)};
+$("del").onclick=()=>{if(cur>=0&&confirm("پرونده حذف شود؟")){cases.splice(cur,1);persist()}renderList()};
+$("rec").onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){alert("مرورگر از تبدیل گفتار پشتیبانی نمی‌کند. از Chrome اندروید استفاده کنید یا از میکروفون کیبورد.");return}
+if(on){rec.stop();return}rec=new SR();rec.lang=$("lang").value;rec.continuous=true;rec.interimResults=false;
+rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)$("tx").value+=(e.results[i][0].transcript+"\n")};
+rec.onend=()=>{if(on)try{rec.start()}catch(e){}};rec.onerror=e=>{if(e.error!="no-speech"&&e.error!="aborted"){on=false;$("rec").textContent="🎙️ شروع ضبط";alert("خطای میکروفون: "+e.error+"\nدسترسی میکروفون را برای سایت در Chrome مجاز کنید.")}};
+on=true;$("rec").textContent="⏹ توقف ضبط";rec.start();const s=rec.stop.bind(rec);rec.stop=()=>{on=false;$("rec").textContent="🎙️ شروع ضبط";s()}};
+$("ext").onclick=async()=>{if(!sample||!$("tx").value.trim())return;$("ext").disabled=true;
+try{const j=await sample.json(SYS+"\nFrom this vet-owner conversation transcript, extract JSON with keys: "+KEYS.map(k=>k[0]).join(",")+",summary. Values are short strings in the transcript's language; use '' if not mentioned; never invent. 'summary' is a concise clinical summary (SOAP-style subjective) including key diagnostic points.\nTRANSCRIPT:\n"+$("tx").value,{cache:false});
+KEYS.forEach(([k])=>{if(j[k])$("k_"+k).value=j[k]});$("sum").value=j.summary||""}catch(e){alert("خطا: "+(e.message||e.code))}$("ext").disabled=false};
+$("dd").onclick=()=>ask(SYS+"\nCase: "+ctx()+"\nGive: 1) ranked differential diagnoses with brief rationale and likelihood, 2) red flags/emergencies, 3) recommended diagnostics (bloodwork, imaging, etc.) with what each would confirm or rule out, 4) key questions still missing from history.",$("ddo"),$("dd"));
+$("cs").onclick=async()=>{const t=$("cm").value.trim();if(!t||!sample)return;$("cm").value="";chat.push({role:"user",content:t});drawChat();$("cs").disabled=true;
+const turns=[{role:"user",content:SYS+"\nCase: "+ctx()+"\nDifferentials so far:\n"+$("ddo").textContent+"\nContinue the discussion; interpret any results I send and refine the diagnosis."},{role:"assistant",content:"آماده‌ام."},...chat.map(m=>({role:m.role,content:m.content}))];
+const d=document.createElement("div");d.className="m a";$("ch").append(d);
+try{const r=await sample(turns,{cache:false,onText:x=>d.textContent=x.text});chat.push({role:"assistant",content:r.text})}catch(e){d.textContent="خطا: "+(e.message||e.code);chat.pop()}$("cs").disabled=false};
+$("tr").onclick=()=>ask(SYS+"\nCase: "+ctx()+"\nFinal diagnosis: "+$("dx").value+"\nWeight kg: "+$("wt").value+"\nGive treatment plan: supportive care, drugs with dose (mg/kg and calculated mg/mL for this weight), route, frequency, duration, contraindications/interactions, monitoring, client advice, follow-up. Warn about species-specific risks.",$("tro"),$("tr"));
+renderList();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script></body></html>
